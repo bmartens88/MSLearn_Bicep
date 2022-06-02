@@ -1,8 +1,20 @@
+param location string = 'westus3'
+param storageAccountName string = 'toylaunch${uniqueString(resourceGroup().id)}'
+param appServiceAppName string = 'toylaunch${uniqueString(resourceGroup().id)}'
+
+@allowed([
+  'nonprod'
+  'prod'
+])
+param environmentType string
+
+var storageAccountSkuName = environmentType == 'prod' ? 'Standard_GRS' : 'Standard_LRS'
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2021-09-01' = {
-  name: 'toylaunchstoragetesterke'
-  location: 'westus3'
+  name: storageAccountName
+  location: location
   sku: {
-    name: 'Standard_LRS'
+    name: storageAccountSkuName
   }
   kind: 'StorageV2'
   properties: {
@@ -10,19 +22,13 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-09-01' = {
   }
 }
 
-resource appServicePlan 'Microsoft.Web/serverfarms@2021-03-01' = {
-  name: 'toy-product-launch-plan-starter'
-  location: 'westus3'
-  sku: {
-    name: 'F1'
+module appService 'modules/appService.bicep' = {
+  name: 'appService'
+  params: {
+    location: location
+    appServiceAppName: appServiceAppName
+    environmentType: environmentType
   }
 }
 
-resource appServiceApp 'Microsoft.Web/sites@2021-03-01' = {
-  name: 'toy-product-launch-1-testerke'
-  location: 'westus3'
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-  }
-}
+output appServiceAppHostName string = appService.outputs.appServiceAppHostName
